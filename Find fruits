@@ -1,0 +1,130 @@
+-- TK22 Hub - Scan All Islands, Auto Hop Server, Auto Store Fruit, UI AFK Time
+
+-- Roblox Asset ID to change Avatar
+local avatarAssetId = "74026087738956" -- Change this ID to change Avatar 
+
+-- Auto Change Avatar
+pcall(function()
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+    player.CharacterAppearanceId = avatarAssetId
+    player:LoadCharacter()
+    print("Avatar has been changed to Asset ID: " .. avatarAssetId)
+end)
+
+-- Create UI shows AFK time in the middle of screen 
+local ScreenGui = Instance.new("ScreenGui")
+local TimerLabel = Instance.new("TextLabel")
+
+ScreenGui.Parent = game.CoreGui
+TimerLabel.Parent = ScreenGui
+TimerLabel.Position = UDim2.new(0.5, -75, 0.05, 0)  -- Center the screen
+TimerLabel.Size = UDim2.new(0, 150, 0, 50)
+TimerLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TimerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TimerLabel.TextSize = 20
+TimerLabel.Text = "AFK: 0s"
+
+-- Variables Control AFK Time
+local timeAFK = 0
+local stopCount = false -- Stop if found fruit
+
+-- Start counting AFK time
+spawn(function()
+    while true do
+        wait(1)
+        if not stopCount then
+            timeAFK = timeAFK + 1
+            TimerLabel.Text = "AFK: " .. timeAFK .. "s"
+        end
+    end
+end)
+
+-- Auto Store Fruits Function
+local function storeFruit(fruitName)
+    local args = {
+        [1] = "StoreFruit",
+        [2] = fruitName
+    }
+    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer(unpack(args))
+    print("Fruit Stored: " .. fruitName)
+end
+
+-- Move To Scan All Islands Function
+local function moveToIsland(position)
+    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(position)
+    wait(2) -- Wait 2sec to load data on that island
+end
+
+-- Islands Location List (Add or edit coordinates as needed)
+local islands = {
+    Vector3.new(1000, 100, 2000),  -- Island 1
+    Vector3.new(3000, 150, 4000),  -- Island 2
+    Vector3.new(5000, 200, 6000),  -- Island 3
+    Vector3.new(7000, 250, 8000),  -- Island 4
+    Vector3.new(9000, 300, 10000), -- Island 5
+}
+
+-- Auto Find Fruits On All Islands Function
+local function scanForFruits()
+    for _, islandPos in pairs(islands) do
+        moveToIsland(islandPos)
+        for _, obj in pairs(game.Workspace:GetDescendants()) do
+            if obj:IsA("Tool") and (string.find(obj.Name:lower(), "fruit") or obj:FindFirstChild("Handle")) then
+                print("Found fruit at:", obj.Name)
+
+                -- Stop counting AFK time
+                tamDungDem = true
+
+                -- Wait until the timer reaches 15 sec before picking up fruit
+                while timeAFK < 15 do
+                    wait(1)
+                end
+
+                -- Picking Up Fruit
+                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = obj.Handle.CFrame
+                wait(1)
+                obj.Parent = game.Players.LocalPlayer.Backpack
+                print("Picked up fruit: " .. obj.Name)
+
+                -- Auto Store Fruit
+                storeFruit(obj.Name)
+
+                -- Continue counting time after picking up fruit
+                stopCount = false
+                timeAFK = 0 -- Reset timer
+                return true -- Found and picked up fruit, stop finding
+            end
+        end
+    end
+    return false -- Fruit not found
+end
+
+-- Auto Find Fruits and Auto Hop Servers after scanning all islands
+local function findFruitAndHop()
+    while true do
+        wait(5)
+        local fruitFound = scanForFruits()
+
+        if not fruitFound then
+            print("Fruit not found on islands, pls wait 10sec before hoping server...")
+            wait(10)
+            print("Hoping server...")
+
+            local HttpService = game:GetService("HttpService")
+            local TeleportService = game:GetService("TeleportService")
+            local PlaceID = game.PlaceId
+
+            local Servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PlaceID.."/servers/Public?sortOrder=Asc&limit=100")).data
+            for _, server in pairs(Servers) do
+                if server.playing < server.maxPlayers then
+                    TeleportService:TeleportToPlaceInstance(PlaceID, server.id)
+                    break
+                end
+            end
+        end
+    end
+end
+
+-- Start Auto Find Fruit
+findFruitAndHop()
