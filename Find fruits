@@ -1,7 +1,7 @@
 -- TK22 Hub - Scan All Islands, Auto Hop Server, Auto Store Fruit, UI AFK Time
 
 -- Roblox Asset ID to change Avatar
-local avatarAssetId = "74026087738956" -- Change this ID to change Avatar 
+local avatarAssetId = "117429729731715" -- Change this ID to change Avatar 
 
 -- Auto Change Avatar
 pcall(function()
